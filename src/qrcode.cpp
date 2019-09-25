@@ -204,6 +204,10 @@ vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
                 else            { weight += fabs((test_lines[i] / length) - 3.0/14.0); }
             }
 
+#define CERR(x) std::cerr<<#x<<" = "<<(x)<<std::endl;//CERR(1<<2)
+
+//            CERR(weight);
+//            CERR(eps_horizontal);
             if(weight < eps_horizontal)
             {
                 result.push_back(list_lines[pnt]);
@@ -353,9 +357,15 @@ bool QRDetect::localization()
 {
     Point2f begin, end;
     vector<Vec3d> list_lines_x = searchHorizontalLines();
-    if( list_lines_x.empty() ) { return false; }
+    if( list_lines_x.empty() ) {
+      std::cerr<<"searchHorizontalLines\n";
+      return false;
+    }
     vector<Point2f> list_lines_y = separateVerticalLines(list_lines_x);
-    if( list_lines_y.size() < 3 ) { return false; }
+    if( list_lines_y.size() < 3 ) {
+      std::cerr<<"separateVerticalLines "<<list_lines_y.size() <<"\n";
+      return false;
+    }
 
     vector<Point2f> centers;
     Mat labels;
@@ -364,6 +374,7 @@ bool QRDetect::localization()
            3, KMEANS_PP_CENTERS, localization_points);
 
     fixationPoints(localization_points);
+    CERR(localization_points.size());
     if (localization_points.size() != 3) { return false; }
 
     if (coeff_expansion > 1.0)
@@ -384,6 +395,7 @@ bool QRDetect::localization()
     {
         for (size_t j = i + 1; j < localization_points.size(); j++)
         {
+          CERR(norm(localization_points[i] - localization_points[j]));
             if (norm(localization_points[i] - localization_points[j]) < 10)
             {
                 return false;
@@ -828,8 +840,14 @@ bool QRCodeDetector::detect(InputArray in, OutputArray points) const
 
     QRDetect qrdet;
     qrdet.init(inarr, p->epsX, p->epsY);
-    if (!qrdet.localizationAT() && !qrdet.localization()) { return false; }
-    if (!qrdet.computeTransformationPoints()) { return false; }
+    if (/*!qrdet.localizationAT() && */!qrdet.localization()) {
+      std::cerr<<"localization\n";
+      return false;
+    }
+    if (!qrdet.computeTransformationPoints()) {
+      CERR("computeTransformationPoints");
+      return false;
+    }
     vector<Point2f> pnts2f = qrdet.getTransformationPoints();
     Mat(pnts2f).convertTo(points, points.fixedType() ? points.type() : CV_32FC2);
     return true;
