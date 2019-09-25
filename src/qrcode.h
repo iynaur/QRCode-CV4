@@ -122,8 +122,8 @@ public:
         if (N < 3) { return 0; }
         float a = 0;
         for (size_t i = 0; i < N; ++i) {
-            const Point2f& p0 = p[i];
-            const Point2f& p1 = p[(i + 1) % N];
+            const cv::Point2f& p0 = p[i];
+            const cv::Point2f& p1 = p[(i + 1) % N];
             a += p0.x * p1.y - p0.y * p1.x;
         }
         if (a < 0) { a = -a; }

@@ -20,7 +20,7 @@ int test_qrcode(cv::Mat src) {
 }
 
 int main(int argc, char *argv[]) {
-    Mat image = imread("../images/version_1_down.jpg");
+    Mat image = imread("../QRCode-CV4/images/version_1_down.jpg");
     test_qrcode_cv(image);
     test_qrcode(image);
     return 0;

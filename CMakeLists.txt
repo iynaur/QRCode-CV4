@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
+set(CMAKE_CXX_STANDARD 11)
 
 add_subdirectory(quirc)
 project(qrcode)
@@ -12,7 +13,7 @@ file(GLOB AT_INC "apriltag/*.h")
 source_group("QR Code" FILES ${QR_SRC} ${QR_INC})
 source_group("AprilTag" FILES ${AT_SRC} ${AT_INC})
 
-find_package(OpenCV REQUIRED)
+find_package(OpenCV 3 REQUIRED)
 include_directories(. quirc/include ${OpenCV_INCLUDE_DIRS})
 add_definitions(-DHAVE_OPENCV -DHAVE_QUIRC -DNOMINMAX)
 
