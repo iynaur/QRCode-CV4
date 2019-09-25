@@ -15,7 +15,7 @@ source_group("AprilTag" FILES ${AT_SRC} ${AT_INC})
 
 find_package(OpenCV 3 REQUIRED)
 include_directories(. quirc/include
-#  usr/local/opencv4/include
+  ${OpenCV_INCLUDE_DIRS}
   )
 #link_directories(usr/local/opencv4/lib)
 add_definitions(-DHAVE_OPENCV -DHAVE_QUIRC -DNOMINMAX)

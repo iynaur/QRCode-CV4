@@ -997,58 +997,57 @@ bool QRDecode::versionDefinition()
 
 bool QRDecode::samplingForVersion()
 {
-    const double multiplyingFactor = (version < 3)  ? 1 :
-                                     (version == 3) ? 1.5 :
-                                     version * (5 + version - 4);
-    const Size newFactorSize(
-                  cvRound(no_border_intermediate.size().width  * multiplyingFactor),
-                  cvRound(no_border_intermediate.size().height * multiplyingFactor));
-    Mat postIntermediate(newFactorSize, CV_8UC1);
-    resize(no_border_intermediate, postIntermediate, newFactorSize, 0, 0, INTER_AREA);
+  const double multiplyingFactor = (version < 3)  ? 1 :
+                                       (version == 3) ? 1.5 :
+                                       version * (5 + version - 4);
+      const Size newFactorSize(
+                    cvRound(no_border_intermediate.size().width  * multiplyingFactor),
+                    cvRound(no_border_intermediate.size().height * multiplyingFactor));
+      Mat postIntermediate(newFactorSize, CV_8UC1);
+      resize(no_border_intermediate, postIntermediate, newFactorSize, 0, 0, INTER_AREA);
 
-    const int delta_rows = cvRound((postIntermediate.rows * 1.0) / version_size);
-    const int delta_cols = cvRound((postIntermediate.cols * 1.0) / version_size);
+      const int delta_rows = cvRound((postIntermediate.rows * 1.0) / version_size);
+      const int delta_cols = cvRound((postIntermediate.cols * 1.0) / version_size);
 
-    vector<double> listFrequencyElem(version_size * version_size, 0);
-    int k = 0;
-    for (int r = 0; r < postIntermediate.rows; r += delta_rows)
-    {
-        for (int c = 0; c < postIntermediate.cols; c += delta_cols)
-        {
-            Mat tile = postIntermediate(
-                           Range(r, min(r + delta_rows, postIntermediate.rows)),
-                           Range(c, min(c + delta_cols, postIntermediate.cols)));
-            const double frequencyElem = (countNonZero(tile) * 1.0) / tile.total();
-            listFrequencyElem[k] = frequencyElem; k++;
-        }
-    }
+      vector<double> listFrequencyElem;
+      for (int r = 0; r < postIntermediate.rows; r += delta_rows)
+      {
+          for (int c = 0; c < postIntermediate.cols; c += delta_cols)
+          {
+              Mat tile = postIntermediate(
+                             Range(r, min(r + delta_rows, postIntermediate.rows)),
+                             Range(c, min(c + delta_cols, postIntermediate.cols)));
+              const double frequencyElem = (countNonZero(tile) * 1.0) / tile.total();
+              listFrequencyElem.push_back(frequencyElem);
+          }
+      }
 
-    double dispersionEFE = std::numeric_limits<double>::max();
-    double experimentalFrequencyElem = 0;
-    for (double expVal = 0; expVal < 1; expVal+=0.001)
-    {
-        double testDispersionEFE = 0.0;
-        for (size_t i = 0; i < listFrequencyElem.size(); i++)
-        {
-            testDispersionEFE += (listFrequencyElem[i] - expVal) *
-                                 (listFrequencyElem[i] - expVal);
-        }
-        testDispersionEFE /= (listFrequencyElem.size() - 1);
-        if (dispersionEFE > testDispersionEFE)
-        {
-            dispersionEFE = testDispersionEFE;
-            experimentalFrequencyElem = expVal;
-        }
-    }
+      double dispersionEFE = std::numeric_limits<double>::max();
+      double experimentalFrequencyElem = 0;
+      for (double expVal = 0; expVal < 1; expVal+=0.001)
+      {
+          double testDispersionEFE = 0.0;
+          for (size_t i = 0; i < listFrequencyElem.size(); i++)
+          {
+              testDispersionEFE += (listFrequencyElem[i] - expVal) *
+                                   (listFrequencyElem[i] - expVal);
+          }
+          testDispersionEFE /= (listFrequencyElem.size() - 1);
+          if (dispersionEFE > testDispersionEFE)
+          {
+              dispersionEFE = testDispersionEFE;
+              experimentalFrequencyElem = expVal;
+          }
+      }
 
-    straight = Mat(Size(version_size, version_size), CV_8UC1, Scalar(0));
-    for (int r = 0; r < version_size * version_size; r++)
-    {
-        int i   = r / straight.cols;
-        int j   = r % straight.cols;
-        straight.ptr<uint8_t>(i)[j] = (listFrequencyElem[r] < experimentalFrequencyElem) ? 0 : 255;
-    }
-    return true;
+      straight = Mat(Size(version_size, version_size), CV_8UC1, Scalar(0));
+      for (int r = 0; r < version_size * version_size; r++)
+      {
+          int i   = r / straight.cols;
+          int j   = r % straight.cols;
+          straight.ptr<uint8_t>(i)[j] = (listFrequencyElem[r] < experimentalFrequencyElem) ? 0 : 255;
+      }
+      return true;
 }
 
 bool QRDecode::decodingProcess()

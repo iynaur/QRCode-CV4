@@ -11,6 +11,18 @@ int test_qrcode_cv(cv::Mat src) {
     cv::QRCodeDetector qrdc;
     std::vector<Point2f> points;
     qrdc.detect(src, points);
+    cv::Mat code;
+    qrdc.decode(src, points, code);
+    if (code.cols) {
+      cv::resize(code, code, cv::Size((code.cols-1)*8+1, (code.rows-1)*8+1),cv::INTER_NEAREST);
+
+      cv::imshow("Matches", code);
+      cv::waitKey(0);
+
+    }
+    else {
+      std::cerr<<"BAD IMAGE\n";
+    }
     std::cerr<<points.size()<<std::endl;
     for (Point2f p : points)
     {
@@ -44,6 +56,7 @@ int main(int argc, char *argv[]) {
 
   for (QString file : list)
   {
+
       if (file.endsWith(".jpg", Qt::CaseInsensitive) ||
           file.endsWith(".png", Qt::CaseInsensitive) ||
           file.endsWith(".jpeg", Qt::CaseInsensitive))
@@ -52,7 +65,7 @@ int main(int argc, char *argv[]) {
           Mat image = imread(one_file);
           test_qrcode_cv(image);
           std::cerr<<one_file<<std::endl;
-      //    test_qrcode(image);
+          test_qrcode(image);
       }
   }
 
