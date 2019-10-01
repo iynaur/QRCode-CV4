@@ -13,7 +13,7 @@ file(GLOB AT_INC "apriltag/*.h")
 source_group("QR Code" FILES ${QR_SRC} ${QR_INC})
 source_group("AprilTag" FILES ${AT_SRC} ${AT_INC})
 
-find_package(OpenCV 3 REQUIRED)
+find_package(OpenCV 4 REQUIRED)
 include_directories(. quirc/include
   ${OpenCV_INCLUDE_DIRS}
   )
