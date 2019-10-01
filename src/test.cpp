@@ -3,6 +3,10 @@
 #include <QString>
 #include <QDir>
 #include <QString>
+#include <fstream>
+
+#include <Eigen/Dense>
+#include <Eigen/Geometry>
 
 #include "qrcode.h"
 using namespace cv;
@@ -64,18 +68,44 @@ double computeReprojectionErrors(
 }
 
 int main(int argc, char *argv[]) {
+    string filename = "../QRCode-CV4/tys_data.txt";
+    string line;
+    ifstream myfile (filename.c_str());
+
+    vector<array<float, 6>> allposes;
+    if (myfile.is_open())
+    {
+        std::array<float, 6> pos;
+        while(getline(myfile, line))
+        {
+            if (line.empty()) continue;
+            stringstream ss;
+            ss<<line;
+            for (int i = 0; i<6; ++i){
+                ss>>pos[i];
+                if (i > 2) pos[i] = pos[i]/180*M_PI;
+            }
+            allposes.push_back(pos);
+        }
+        myfile.close();
+    }
   string folderPath = "../tys-data3/tys-data2";
 
   vector<vector<Point2f>> pointslist;
-  for (int i  = 1; i<= 42; ++i)
+  vector<array<float, 6>> goodposes;
+  for (int i  = 1; i<= 18 ; ++i)
   {
-      system(("cp " + folderPath + "/"+std::to_string(i) +"/2.jpg " + "./robot" + std::to_string(i)
-             + ".jpg").c_str());
+//      system(("cp " + folderPath + "/"+std::to_string(i) +"/2.jpg " + "./robot" + std::to_string(i)
+//             + ".jpg").c_str());
           std::string one_file = folderPath + "/"+std::to_string(i) +"/rgb_0.png";
           Mat image = imread(one_file);
           std::vector<Point2f> points;
-          if (test_qrcode_cv(image, points) == 4) pointslist.push_back(points);
-          std::cerr<<one_file<<std::endl;
+          if (test_qrcode_cv(image, points) == 4) {
+              pointslist.push_back(points);
+              if (i<allposes.size()) goodposes.push_back(allposes[i]);
+              std::cerr<<one_file<<std::endl;
+
+          }
   }
   vector<vector<Point3f> > object_pointsL;
   for (auto x : pointslist)
@@ -98,16 +128,68 @@ int main(int argc, char *argv[]) {
 
   double errorL;
   errorL = calibrateCamera(object_pointsL, pointslist, Size(1920, 1080), KL, DL, rvecsL, tvecsL, flagL);
+  CERR(errorL)
   vector<float> reprojErrsL;
   errorL = computeReprojectionErrors(object_pointsL, pointslist,
               rvecsL, tvecsL, KL, DL, reprojErrsL);
 
   CERR(KL);
   CERR(DL);
-  for (auto x : tvecsL)
+  for (auto x : reprojErrsL)
   {
       CERR(x);
   }
+
+  int n = goodposes.size();
+
+  auto abc2rot = [](array<float, 6> pos)->Eigen::Matrix3f
+  {
+      Eigen::Vector3f axis(pos[3], pos[4], pos[5]);
+//      CERR(axis);
+      float angle = axis.norm();
+      axis = axis/angle;
+//      return (Eigen::AngleAxisf(angle, axis)) .matrix();//mirror
+      return (Eigen::AngleAxisf(pos[3], Eigen::Vector3f::UnitX())*
+              Eigen::AngleAxisf(pos[4], Eigen::Vector3f::UnitY())*
+              Eigen::AngleAxisf(pos[5], Eigen::Vector3f::UnitZ())) .matrix();
+  };
+  auto rvec2rot = [](Mat rvec)->Eigen::Matrix3f
+  {
+//      CERR(rvec);
+      //why double? how to get scalar type?
+      Eigen::Vector3f axis(rvec.at<double>(0,0), rvec.at<double>(1,0), rvec.at<double>(2,0));
+//      CERR(axis);
+      float angle = axis.norm();
+      axis = axis/angle;
+      return (Eigen::AngleAxisf(angle, axis)) .matrix();//mirror
+  };
+  for (int i = 0; i< n; ++i)//robot pose
+  {
+      Eigen::Matrix3f base2handi = abc2rot(goodposes[i]);
+      Eigen::Matrix3f cam2pati = rvec2rot(rvecsL[i]);
+      CERR(cam2pati)
+      for (int j=0; j<n; ++j)// cam pose
+      {
+          if (i==j) continue;
+
+          Eigen::Matrix3f base2handj = abc2rot(goodposes[j]);
+
+          Eigen::Matrix3f cam2patj = rvec2rot(rvecsL[j]);
+
+          Eigen::Matrix3f A = cam2patj*cam2pati.inverse();
+          Eigen::Matrix3f B = base2handj.inverse()*base2handi;
+
+          Eigen::AngleAxisf ax(A);
+          Eigen::AngleAxisf bx(B);
+
+          float x = ax.angle() - floor(ax.angle()/(2*M_PI))*2*M_PI - M_PI;
+          float y = bx.angle() - floor(bx.angle()/(2*M_PI))*2*M_PI - M_PI;
+
+          cerr<<i<<" "<<j<<" "<<((fabs(x) - fabs(y))/M_PI*180)<<endl;
+      }
+  }
+
+
 
     return 0;
 }
