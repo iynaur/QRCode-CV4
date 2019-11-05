@@ -5,68 +5,38 @@
 #include <QString>
 
 using namespace cv;
-
-int test_qrcode_cv(cv::Mat src) {
-//#if (CV_VERSION_MAJOR > 3)
-    cv::QRCodeDetector qrdc;
-    std::vector<Point2f> points;
-    qrdc.detect(src, points);
-    cv::Mat code;
-    qrdc.decode(src, points, code);
-    if (code.cols) {
-      cv::resize(code, code, cv::Size((code.cols-1)*8+1, (code.rows-1)*8+1),cv::INTER_NEAREST);
-
-      cv::imshow("Matches", code);
-      cv::waitKey(0);
-
-    }
-    else {
-      std::cerr<<"BAD IMAGE\n";
-    }
-    std::cerr<<points.size()<<std::endl;
-    for (Point2f p : points)
-    {
-      std::cerr<<p.x<<" "<<p.y<<"\n";
-    }
-
-    std::string dec = qrdc.detectAndDecode(src);
-    std::cerr << "decode: " << dec<<" from\n";
-//#endif
-    return 0;
-}
-
-int test_qrcode(cv::Mat src) {
-    pc::QRCodeDetector qrdc;
-    std::vector<Point2f> points;
-    qrdc.detect(src, points);
-    std::cerr<<points.size()<<std::endl;
-    for (Point2f p : points)
-    {
-      std::cerr<<p.x<<" "<<p.y<<"\n";
-    }
-    std::string dec = qrdc.detectAndDecode(src);
-    std::cerr << "decode: " << dec<<" from\n";
-    return 0;
-}
+using namespace std;
 
 int main(int argc, char *argv[]) {
-  QString folderPath = "../QRCode-CV4/images";
-  QDir dir(folderPath);
-  QStringList list = dir.entryList();
 
-  for (QString file : list)
+  float max = 0;
+  for (int cnt = 0; cnt < 32; ++cnt)
   {
+    std::string one_file ="ir_" + to_string(cnt) + ".png";
+    Mat image = imread(one_file, IMREAD_UNCHANGED);
 
-      if (file.endsWith(".jpg", Qt::CaseInsensitive) ||
-          file.endsWith(".png", Qt::CaseInsensitive) ||
-          file.endsWith(".jpeg", Qt::CaseInsensitive))
+    cv::Mat gray(image.rows, image.cols, CV_32F);
+
+    for (int i = 0; i < image.rows; ++i)
+      for (int j = 0; j < image.cols; ++j)
       {
-          std::string one_file = (folderPath + "/"+file).toStdString();
-          Mat image = imread(one_file);
-          test_qrcode_cv(image);
-          std::cerr<<one_file<<std::endl;
-          test_qrcode(image);
+        float f;
+        uchar *pos = (uchar*)&f;
+        for (int k = 0; k < 4; ++k)
+        {
+          *(pos + k) = image.at<Vec4b>(i, j)(k);
+        }
+        cerr<<f<<endl;
+        max= std::max(max, f);
+        gray.at<float>(i, j) = min(f/4000, 1.0f);
+
       }
+    imshow("", gray);
+//    waitKey();
+    Mat1b imageF_8U;
+    gray.convertTo(imageF_8U, CV_8U, 255);
+    cv::imwrite(to_string(cnt) + "gray.png", imageF_8U);
+    cerr<<max<<endl;
   }
 
     return 0;

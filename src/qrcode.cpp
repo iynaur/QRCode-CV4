@@ -8,6 +8,7 @@
 #include "opencv2/objdetect.hpp"
 #include "opencv2/calib3d.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "qrcode.h"
 
 #ifdef HAVE_QUIRC
@@ -75,6 +76,7 @@ void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_
     eps_vertical   = eps_vertical_;
     eps_horizontal = eps_horizontal_;
     adaptiveThreshold(barcode, bin_barcode, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 83, 2);
+    cv::imwrite(std::to_string(rand())+".jpg", bin_barcode);
 
 }
 
